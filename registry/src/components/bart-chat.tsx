@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { useBartChat, type UseBartChatOptions } from "../core/use-bart-chat";
+import type { ReactNode } from "react";
+import type { UseBartChatOptions } from "../core/use-bart-chat";
 import type { BartAppearance, BartVariant } from "../core/types";
+import { BartProvider } from "./bart-provider";
 import { BartDock } from "./dock";
 import { BartSidebar, type SidebarLauncher } from "./sidebar";
 import { BartSelectionPopover } from "./selection-popover";
@@ -30,6 +31,12 @@ export interface BartChatProps extends UseBartChatOptions {
   selectionAsk?: boolean;
 }
 
+/**
+ * Batteries-included default composition: a `BartProvider` plus one variant
+ * shell and the selection popover. Consumers who want to rearrange the pieces
+ * (custom header actions, their own layout) can drop the `variant` prop and
+ * compose `<BartProvider>` with the shell + parts directly.
+ */
 export function BartChat({
   variant = "dock",
   title = "Bart",
@@ -43,62 +50,29 @@ export function BartChat({
   selectionAsk = true,
   ...chatOptions
 }: BartChatProps) {
-  const bart = useBartChat(chatOptions);
-  const [open, setOpen] = useState(false);
-
-  const askAboutSelection = (text: string) => {
-    bart.attachQuote(text);
-    setOpen(true);
-  };
-
   const shell =
     variant === "sidebar" ? (
       <BartSidebar
-        bart={bart}
-        open={open}
-        onOpenChange={setOpen}
-        title={title}
         side={side}
         launcher={launcher}
-        appearance={appearance}
-        icon={icon}
         header={header}
         inputSeparator={inputSeparator}
       />
     ) : variant === "spotlight" ? (
-      <BartSpotlight
-        bart={bart}
-        open={open}
-        onOpenChange={setOpen}
-        title={title}
-        shortcutKey={shortcutKey}
-        appearance={appearance}
-        icon={icon}
-      />
+      <BartSpotlight shortcutKey={shortcutKey} />
     ) : (
-      <BartDock
-        bart={bart}
-        open={open}
-        onOpenChange={setOpen}
-        title={title}
-        side={side}
-        appearance={appearance}
-        icon={icon}
-        header={header}
-        inputSeparator={inputSeparator}
-      />
+      <BartDock side={side} header={header} inputSeparator={inputSeparator} />
     );
 
   return (
-    <>
-      {selectionAsk && (
-        <BartSelectionPopover
-          title={title}
-          icon={icon}
-          onAsk={askAboutSelection}
-        />
-      )}
+    <BartProvider
+      {...chatOptions}
+      title={title}
+      icon={icon}
+      appearance={appearance}
+    >
+      {selectionAsk && <BartSelectionPopover />}
       {shell}
-    </>
+    </BartProvider>
   );
 }

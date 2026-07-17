@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  type AnimationEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type AnimationEvent } from "react";
 import { motionDisabled } from "../core/motion";
 import { normalizeSelection } from "../core/selection";
-import { BartIcon } from "./icons";
+import { useBartContext } from "./bart-provider";
 
 interface PopoverState {
   x: number;
@@ -36,18 +31,13 @@ function eligibleSelection(): { text: string; rect: DOMRect } | null {
 }
 
 /**
- * Floating "Ask Bart" button shown above a text selection. Rendered once by
- * BartChat; `onAsk` receives the selected text (already normalized/capped).
+ * Floating "Ask Bart" button shown above a text selection. Reads the title,
+ * icon, and the attach-and-open action from context, so it must render inside a
+ * `<BartProvider>` (or `<BartChat>`). The selected text is normalized/capped by
+ * `askAboutSelection`.
  */
-export function BartSelectionPopover({
-  onAsk,
-  title = "Bart",
-  icon = <BartIcon />,
-}: {
-  onAsk: (text: string) => void;
-  title?: string;
-  icon?: ReactNode;
-}) {
+export function BartSelectionPopover() {
+  const { title, icon, askAboutSelection } = useBartContext();
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [closing, setClosing] = useState(false);
 
@@ -126,7 +116,7 @@ export function BartSelectionPopover({
         onClick={() => {
           dismiss();
           window.getSelection()?.removeAllRanges();
-          onAsk(popover.text);
+          askAboutSelection(popover.text);
         }}
       >
         {icon} Ask {title}

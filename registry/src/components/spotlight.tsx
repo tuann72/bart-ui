@@ -4,17 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../core/focus-trap";
 import { shouldTriggerShortcut } from "../core/shortcut";
 import { useShellLifecycle } from "../core/use-shell-lifecycle";
-import type { UseBartChatReturn } from "../core/use-bart-chat";
 import type { BartUIMessage } from "../core/types";
-import type { ReactNode } from "react";
-import type { BartAppearance } from "../core/types";
-import {
-  AutoApproveToggle,
-  ChatInput,
-  MessageList,
-  surfaceClass,
-} from "./chat-parts";
-import { BartIcon, RefreshIcon } from "./icons";
+import { useBartContext } from "./bart-provider";
+import { AutoApproveButton, BartInput, BartMessages, surfaceClass } from "./chat-parts";
+import { RefreshIcon } from "./icons";
 
 /** Last user message plus everything after it — the current exchange. */
 function lastExchange(messages: BartUIMessage[]): BartUIMessage[] {
@@ -23,32 +16,18 @@ function lastExchange(messages: BartUIMessage[]): BartUIMessage[] {
 }
 
 export interface BartSpotlightProps {
-  bart: UseBartChatReturn;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title?: string;
   shortcutKey?: string;
-  appearance?: BartAppearance;
-  /** Brand mark shown in the closed-state hint. Defaults to the Bart ring. */
-  icon?: ReactNode;
 }
 
-export function BartSpotlight({
-  bart,
-  open,
-  onOpenChange,
-  title = "Bart",
-  shortcutKey = "/",
-  appearance = "default",
-  icon = <BartIcon />,
-}: BartSpotlightProps) {
+export function BartSpotlight({ shortcutKey = "/" }: BartSpotlightProps) {
+  const { bart, open, setOpen, title, icon, appearance } = useBartContext();
   const [showHistory, setShowHistory] = useState(false);
   const restoreRef = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { showPanel, closing, close, panelAnimationEnd } = useShellLifecycle({
     open,
-    onOpenChange,
+    onOpenChange: setOpen,
   });
   useFocusTrap(containerRef, showPanel);
 
@@ -72,12 +51,12 @@ export function BartSpotlight({
           document.activeElement instanceof HTMLElement
             ? document.activeElement
             : null;
-        onOpenChange(true);
+        setOpen(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showPanel, shortcutKey, onOpenChange]);
+  }, [showPanel, shortcutKey, setOpen]);
 
   if (!showPanel) {
     return (
@@ -109,8 +88,7 @@ export function BartSpotlight({
         onAnimationEnd={panelAnimationEnd}
       >
         <div className={`${surfaceClass(appearance)} bart-spotlight-inputcard`}>
-          <ChatInput
-            bart={bart}
+          <BartInput
             autoFocus
             placeholder={`Ask ${title} anything…`}
             className="bart-spotlight-input"
@@ -120,7 +98,7 @@ export function BartSpotlight({
               <kbd className="bart-kbd">Esc</kbd> to close
             </span>
             <div className="bart-spotlight-actions">
-              <AutoApproveToggle bart={bart} label />
+              <AutoApproveButton label />
               {bart.messages.length > 0 && (
                 <>
                   <button
@@ -147,7 +125,7 @@ export function BartSpotlight({
         </div>
         {visible.length > 0 && (
           <div className={`${surfaceClass(appearance)} bart-spotlight-results`}>
-            <MessageList bart={bart} messages={visible} />
+            <BartMessages messages={visible} />
           </div>
         )}
       </div>

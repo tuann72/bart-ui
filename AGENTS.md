@@ -106,12 +106,18 @@ hoisted to root `node_modules`).
     (quote normalization/capping + blockquote building, DOM-free),
     `focus-trap.ts`, `use-resize-drag.ts` (pointer-capture drag plumbing +
     the page-wide cursor class, shared by every resize handle), `types.ts`
-  - `src/components/` — `bart-chat.tsx` (variant switch; owns the shared
-    `open` state and the selection popover), `dock.tsx`, `sidebar.tsx`,
-    `spotlight.tsx` (all controlled via `open`/`onOpenChange`),
-    `selection-popover.tsx`, `chat-parts.tsx` (MessageList/ChatInput/
-    approval cards/selected-text pills shared by all shells, plus the
-    `surfaceClass`/`resolveHeader` helpers behind the configuration props)
+  - `src/components/` — `bart-provider.tsx` (`BartProvider`: runs the headless
+    core and owns the shared `open` state, exposing both through
+    `useBartContext`; also the per-shell `close` context behind `useCloseBart`),
+    `bart-chat.tsx` (the batteries-included default — a thin `BartProvider` +
+    one variant shell + selection popover), `dock.tsx`, `sidebar.tsx`,
+    `spotlight.tsx` (shells read state from context, not props; dock/sidebar
+    accept a `children` override for the panel body), `selection-popover.tsx`,
+    `chat-parts.tsx` (the composable context-driven parts — `BartHeader`,
+    `BartActions`, `BartTitle`, `BartBody`, `BartMessages`, `BartInput`,
+    `NewChatButton`, `AutoApproveButton`, `CloseButton` — over the internal
+    `MessageList`/`ChatInput`/`AutoApproveToggle` primitives, plus the approval
+    cards, selected-text pills, and the `surfaceClass`/`resolveHeader` helpers)
   - `src/server/` — `index.ts` (`createBartHandler`), `context.ts`
     (deterministic lexical selection under a character budget)
   - `src/styles.css` — `--bart-*` theming tokens + all component styling
@@ -194,6 +200,18 @@ From the repo root:
   because every variant's panel is dark (solid or glass) in that theme.
   Literal colors hardcoded in a rule are the bug — they cannot have a second
   theme.
+- Two composition layers, one core. `<BartChat>` is the batteries-included
+  default (a variant switch, the thing `bart init` scaffolds); underneath it,
+  `<BartProvider>` + the composable parts (`BartHeader`/`BartActions`/
+  `BartTitle`/`BartBody`/`BartMessages`/`BartInput`/`NewChatButton`/
+  `AutoApproveButton`/`CloseButton`) are the shadcn-style API for consumers who
+  want to rearrange the pieces. The parts read shared state from
+  `useBartContext` (never prop-drilled `bart`); dock/sidebar take a `children`
+  override for the panel body, defaulting to `<BartHeader/>` + `<BartBody/>`.
+  **The composable parts are presentation only** — they must never carry
+  tool-policy decisions. Security stays in `useBartChat` (invariant 2), so a
+  consumer omitting or reordering a button can change what is *shown*, never
+  what is *enforced*.
 - Shell configuration is props, not forks: `appearance` (`"default"` opaque
   surface — the default — or `"glass"` backdrop blur), `icon` (any node,
   everywhere the brand mark shows), `title` (the shell name), and on

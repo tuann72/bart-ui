@@ -20,8 +20,8 @@ import type {
   BartTools,
   BartUIMessage,
 } from "../core/types";
+import { BartShellProvider, useBartContext, useCloseBart } from "./bart-provider";
 import {
-  BartIcon,
   CheckIcon,
   CloseIcon,
   RefreshIcon,
@@ -396,61 +396,163 @@ export function AutoApproveToggle({
   );
 }
 
-/** Title row shared by the dock and sidebar shells: brand, auto-approve, new chat, close. */
-export function PanelHeader({
-  title,
-  icon = <BartIcon />,
-  bart,
-  onClose,
-}: {
-  title: string;
-  icon?: ReactNode;
-  bart: UseBartChatReturn;
-  onClose: () => void;
-}) {
-  const onNewChat = bart.reset;
+// ---------- composable parts (context-driven) ----------
+// These read the shared state from `useBartContext`, so a consumer can drop
+// them anywhere inside a shell and rearrange them without prop drilling. The
+// dock/sidebar default header is just the standard arrangement of them.
+
+/** Brand mark + title, from context. */
+export function BartTitle() {
+  const { title, icon } = useBartContext();
+  return (
+    <span className="bart-panel-title">
+      {icon} {title}
+    </span>
+  );
+}
+
+/** Right-aligned action group inside the header (holds the action buttons). */
+export function BartActions({ children }: { children?: ReactNode }) {
+  return <div className="bart-panel-actions">{children}</div>;
+}
+
+/** Auto-approve switch, bound to the shared chat state. */
+export function AutoApproveButton({ label = false }: { label?: boolean }) {
+  const { bart } = useBartContext();
+  return <AutoApproveToggle bart={bart} label={label} />;
+}
+
+/** Start-a-fresh-conversation button. */
+export function NewChatButton() {
+  const { bart } = useBartContext();
+  return (
+    <button
+      type="button"
+      className="bart-icon-btn"
+      aria-label="Start new chat"
+      title="Start new chat"
+      onClick={bart.reset}
+    >
+      <RefreshIcon />
+    </button>
+  );
+}
+
+/** Close button; plays the shell's exit animation via the shell context. */
+export function CloseButton() {
+  const close = useCloseBart();
+  return (
+    <button
+      type="button"
+      className="bart-icon-btn"
+      aria-label="Close chat"
+      title="Close chat"
+      onClick={close}
+    >
+      <CloseIcon />
+    </button>
+  );
+}
+
+/**
+ * The dock/sidebar title bar. With no children it renders the standard
+ * arrangement (brand, auto-approve, new chat, close); pass children to compose
+ * your own — group action buttons in a `<BartActions>` for the right-aligned
+ * layout.
+ */
+export function BartHeader({ children }: { children?: ReactNode }) {
   return (
     <header className="bart-panel-header">
-      <span className="bart-panel-title">
-        {icon} {title}
-      </span>
-      <div className="bart-panel-actions">
-        <AutoApproveToggle bart={bart} />
-        <button
-          type="button"
-          className="bart-icon-btn"
-          aria-label="Start new chat"
-          title="Start new chat"
-          onClick={onNewChat}
-        >
-          <RefreshIcon />
-        </button>
-        <button
-          type="button"
-          className="bart-icon-btn"
-          aria-label="Close chat"
-          title="Close chat"
-          onClick={onClose}
-        >
-          <CloseIcon />
-        </button>
-      </div>
+      {children ?? (
+        <>
+          <BartTitle />
+          <BartActions>
+            <AutoApproveButton />
+            <NewChatButton />
+            <CloseButton />
+          </BartActions>
+        </>
+      )}
     </header>
   );
 }
 
-/** Standard stacked layout used by the dock and sidebar shells. */
-export function ChatPanel({
-  bart,
-  autoFocus = true,
+/**
+ * The scrolling conversation. Defaults to the full history from context; pass
+ * `messages` to render a filtered view (the spotlight shows only the latest
+ * exchange).
+ */
+export function BartMessages({
+  messages,
+  className,
 }: {
-  bart: UseBartChatReturn;
-  autoFocus?: boolean;
+  messages?: BartUIMessage[];
+  className?: string;
 }) {
+  const { bart } = useBartContext();
+  return (
+    <MessageList
+      bart={bart}
+      messages={messages ?? bart.messages}
+      className={className}
+    />
+  );
+}
+
+/** The message composer, from context. */
+export function BartInput({
+  autoFocus = false,
+  placeholder,
+  className,
+}: {
+  autoFocus?: boolean;
+  placeholder?: string;
+  className?: string;
+}) {
+  const { bart } = useBartContext();
+  return (
+    <ChatInput
+      bart={bart}
+      autoFocus={autoFocus}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
+/** Standard stacked body (messages + input) for the dock and sidebar shells. */
+export function BartBody({ autoFocus = true }: { autoFocus?: boolean }) {
   return (
     <div className="bart-panel-body">
-      <MessageList bart={bart} messages={bart.messages} />
-      <ChatInput bart={bart} autoFocus={autoFocus} />
+      <BartMessages />
+      <BartInput autoFocus={autoFocus} />
     </div>
+  );
+}
+
+/**
+ * Default dock/sidebar panel contents: the shell's motion-aware `close` in
+ * context, then either the consumer's own `children` or the standard header +
+ * body. Both stacking shells render through this so they differ only in their
+ * frame (resize edges, launcher), never in body composition.
+ */
+export function BartPanelContents({
+  close,
+  header,
+  children,
+}: {
+  close: () => void;
+  header?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <BartShellProvider close={close}>
+      {children ?? (
+        <>
+          {resolveHeader(header, <BartHeader />)}
+          <BartBody />
+        </>
+      )}
+    </BartShellProvider>
   );
 }

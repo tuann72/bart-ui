@@ -1,8 +1,25 @@
 export { BartChat, type BartChatProps } from "./components/bart-chat";
+export {
+  BartProvider,
+  useBartContext,
+  useCloseBart,
+  type BartContextValue,
+  type BartProviderProps,
+} from "./components/bart-provider";
 export { BartDock } from "./components/dock";
 export { BartSidebar, type SidebarLauncher } from "./components/sidebar";
 export { BartSpotlight } from "./components/spotlight";
-export { ChatInput, ChatPanel, MessageList } from "./components/chat-parts";
+export {
+  AutoApproveButton,
+  BartActions,
+  BartBody,
+  BartHeader,
+  BartInput,
+  BartMessages,
+  BartTitle,
+  CloseButton,
+  NewChatButton,
+} from "./components/chat-parts";
 export { BartSelectionPopover } from "./components/selection-popover";
 export {
   appendSelection,

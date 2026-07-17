@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
-import { useBartChat } from "../core/use-bart-chat";
 import type {
   BartAppearance,
   BartPublicManifest,
   BartVariant,
 } from "../core/types";
+import { BartProvider } from "./bart-provider";
 import { BartDock } from "./dock";
 import { BartSidebar } from "./sidebar";
 import { BartSpotlight } from "./spotlight";
@@ -115,15 +115,18 @@ function Host({
   header?: ReactNode;
   inputSeparator?: boolean;
 }) {
-  const bart = useBartChat({
-    api: "/api/bart",
-    currentRoute: "/",
-    navigate: onNavigate,
-    manifest,
-  });
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <BartProvider
+      api="/api/bart"
+      currentRoute="/"
+      navigate={onNavigate}
+      manifest={manifest}
+      appearance={appearance}
+      icon={icon}
+      open={open}
+      onOpenChange={setOpen}
+    >
       <button type="button" onClick={() => setOpen(true)}>
         external-open
       </button>
@@ -138,37 +141,13 @@ function Host({
         page-order-button
       </button>
       {variant === "dock" && (
-        <BartDock
-          bart={bart}
-          open={open}
-          onOpenChange={setOpen}
-          appearance={appearance}
-          icon={icon}
-          header={header}
-          inputSeparator={inputSeparator}
-        />
+        <BartDock header={header} inputSeparator={inputSeparator} />
       )}
       {variant === "sidebar" && (
-        <BartSidebar
-          bart={bart}
-          open={open}
-          onOpenChange={setOpen}
-          appearance={appearance}
-          icon={icon}
-          header={header}
-          inputSeparator={inputSeparator}
-        />
+        <BartSidebar header={header} inputSeparator={inputSeparator} />
       )}
-      {variant === "spotlight" && (
-        <BartSpotlight
-          bart={bart}
-          open={open}
-          onOpenChange={setOpen}
-          appearance={appearance}
-          icon={icon}
-        />
-      )}
-    </>
+      {variant === "spotlight" && <BartSpotlight />}
+    </BartProvider>
   );
 }
 

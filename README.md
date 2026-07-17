@@ -136,10 +136,12 @@ launcher itself imports no adapter and favors no provider. Verify with
 - `registry/src/core/use-bart-chat.ts` is the headless core (built on the
   Vercel AI SDK's `useChat`). It owns transport, streaming, and **all** tool
   security: route allowlisting, target validation, approval policies, and
-  per-turn navigation caps. The three variant components in
-  `registry/src/components/` are thin shells over it, sharing one lifecycle
-  hook for open/close animation, Escape, and focus restore, and one header
-  for the new-chat/close actions.
+  per-turn navigation caps. `BartProvider` (`components/bart-provider.tsx`) runs
+  that core and owns the panel's open state, exposing both through
+  `useBartContext`. The three variant shells and the composable parts read from
+  that context — sharing one lifecycle hook for open/close animation, Escape,
+  and focus restore — so security lives in exactly one place regardless of how
+  the UI is composed.
 - `registry/src/server/index.ts` exports `createBartHandler`, a Fetch-standard
   `Request -> Response` handler with schema validation, origin checks, size and
   duration limits, and delimited site context. The playground mounts it on
@@ -148,11 +150,43 @@ launcher itself imports no adapter and favors no provider. Verify with
   `--bart-accent` (and their `-foreground` pairs) to rebrand every variant,
   with separate `.dark` values.
 
+### Composition
+
+`<BartChat>` is the batteries-included default: pick a `variant` and it renders
+a `BartProvider`, one shell, and the selection popover. For more control, drop
+`variant` and compose the pieces yourself (shadcn-style — you own the source):
+
+```tsx
+<BartProvider api="/api/bart" currentRoute={route} navigate={navigate} manifest={manifest}>
+  <BartDock>
+    <BartHeader>
+      <BartTitle />
+      <BartActions>
+        <AutoApproveButton />
+        <NewChatButton />
+        <CloseButton />
+      </BartActions>
+    </BartHeader>
+    <BartBody />
+  </BartDock>
+</BartProvider>
+```
+
+Every part (`BartHeader`, `BartActions`, `BartTitle`, `BartBody`,
+`BartMessages`, `BartInput`, `NewChatButton`, `AutoApproveButton`,
+`CloseButton`) reads shared state from `useBartContext`, so you can drop,
+reorder, or wrap them freely. `BartDock`/`BartSidebar` render
+`<BartHeader/>` + `<BartBody/>` when given no children. These are presentation
+only — tool security stays in the core, so recomposing the UI never changes
+what is enforced.
+
 ### Configuration
 
-Everything below is a prop on `<BartChat>` (the per-shell components accept
-the same ones where they apply). Required: `api`, `currentRoute`, `navigate`,
-and `manifest`.
+Everything below is a prop on `<BartChat>` (or `<BartProvider>` for the
+chat/appearance options; the shell layout props — `variant`, `side`,
+`launcher`, `header`, `inputSeparator`, `shortcutKey` — live on `<BartChat>` or
+the individual shells). Required: `api`, `currentRoute`, `navigate`, and
+`manifest`.
 
 | Prop | Default | What it does |
 | --- | --- | --- |

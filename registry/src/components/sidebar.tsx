@@ -11,16 +11,9 @@ import {
 import { useResizeDrag } from "../core/use-resize-drag";
 import { useShellLifecycle } from "../core/use-shell-lifecycle";
 import { useSidebarPush } from "../core/use-sidebar-push";
-import type { UseBartChatReturn } from "../core/use-bart-chat";
 import type { ReactNode } from "react";
-import type { BartAppearance } from "../core/types";
-import {
-  ChatPanel,
-  PanelHeader,
-  resolveHeader,
-  surfaceClass,
-} from "./chat-parts";
-import { BartIcon } from "./icons";
+import { useBartContext } from "./bart-provider";
+import { BartPanelContents, surfaceClass } from "./chat-parts";
 
 /** How the collapsed sidebar invites a click: a vertical edge tab, or a
  *  floating button in the bottom corner. */
@@ -30,33 +23,24 @@ const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 640;
 
 export interface BartSidebarProps {
-  bart: UseBartChatReturn;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title?: string;
   side?: BartSide;
   launcher?: SidebarLauncher;
-  appearance?: BartAppearance;
-  /** Brand mark shown in the launcher and header. Defaults to the Bart ring. */
-  icon?: ReactNode;
   /** `true`/omitted: standard header. `false`/`null`: none. Node: your own. */
   header?: ReactNode;
   /** Draw the line between the conversation and the input row. Default on. */
   inputSeparator?: boolean;
+  /** Panel contents. Defaults to the standard header + body. */
+  children?: ReactNode;
 }
 
 export function BartSidebar({
-  bart,
-  open,
-  onOpenChange,
-  title = "Bart",
   side = "right",
   launcher = "tab",
-  appearance = "default",
-  icon = <BartIcon />,
   header,
   inputSeparator = true,
+  children,
 }: BartSidebarProps) {
+  const { open, setOpen, title, icon, appearance } = useBartContext();
   // null until dragged: the panel and the page's push margin both read
   // --bart-sidebar-width, so the CSS default drives them until a resize sets it.
   const [width, setWidth] = useState<number | null>(null);
@@ -65,7 +49,7 @@ export function BartSidebar({
   const dragStartWidth = useRef(0);
   const { showPanel, closing, close, panelAnimationEnd } = useShellLifecycle({
     open,
-    onOpenChange,
+    onOpenChange: setOpen,
     restoreFocusTo: launcherRef,
   });
   useFocusTrap(panelRef, showPanel);
@@ -107,7 +91,7 @@ export function BartSidebar({
             className={`bart-sidebar-button ${sideClass}`}
             aria-expanded="false"
             aria-haspopup="dialog"
-            onClick={() => onOpenChange(true)}
+            onClick={() => setOpen(true)}
           >
             {icon}
             {title}
@@ -120,7 +104,7 @@ export function BartSidebar({
             className={`bart-sidebar-tab ${sideClass}`}
             aria-expanded="false"
             aria-haspopup="dialog"
-            onClick={() => onOpenChange(true)}
+            onClick={() => setOpen(true)}
           >
             {icon}
             <span className="bart-sidebar-tab-label">{title}</span>
@@ -142,16 +126,9 @@ export function BartSidebar({
             onKeyDown={resizeWithKeyboard}
             {...resizeHandle}
           />
-          {resolveHeader(
-            header,
-            <PanelHeader
-              title={title}
-              icon={icon}
-              bart={bart}
-              onClose={close}
-            />,
-          )}
-          <ChatPanel bart={bart} />
+          <BartPanelContents close={close} header={header}>
+            {children}
+          </BartPanelContents>
         </div>
       )}
     </>
