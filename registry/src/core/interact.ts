@@ -1,5 +1,5 @@
 import { runHighlight } from "./highlight";
-import type { BartToolOutput } from "./types";
+import type { BartHighlightOptions, BartToolOutput } from "./types";
 
 /**
  * Elements the interact tool may click. Links are deliberately excluded:
@@ -21,7 +21,10 @@ function isClickable(element: HTMLElement): boolean {
  * the highlight overlay so the user sees what was clicked, then dispatches a
  * native click so the page's own handlers run unchanged.
  */
-export function runInteract(targetId: string): BartToolOutput {
+export function runInteract(
+  targetId: string,
+  highlightOptions?: BartHighlightOptions,
+): BartToolOutput {
   const element = document.querySelector(
     `[data-bart-target="${CSS.escape(targetId)}"]`,
   );
@@ -42,6 +45,7 @@ export function runInteract(targetId: string): BartToolOutput {
   // Scrolls into view, draws the overlay, and announces via the shared
   // aria-live region — the user always sees and hears what got clicked.
   const shown = runHighlight(targetId, {
+    ...highlightOptions,
     durationMs: 1600,
     label: `Clicked: ${targetId}`,
   });

@@ -1,8 +1,9 @@
-import type { BartToolOutput } from "./types";
+import type { BartHighlightOptions, BartToolOutput } from "./types";
 
 interface ActiveHighlight {
   overlay: HTMLElement;
   timer: number;
+  cleanup: () => void;
 }
 
 let active: ActiveHighlight | null = null;
@@ -23,6 +24,7 @@ function liveRegion(): HTMLElement {
 export function dismissHighlight(): void {
   if (!active) return;
   window.clearTimeout(active.timer);
+  active.cleanup();
   active.overlay.remove();
   active = null;
 }
@@ -35,12 +37,12 @@ export function dismissHighlight(): void {
  */
 export function runHighlight(
   targetId: string,
-  options?: { durationMs?: number; label?: string },
+  options?: BartHighlightOptions & { label?: string },
 ): BartToolOutput {
   const element = document.querySelector(
     `[data-bart-target="${CSS.escape(targetId)}"]`,
   );
-  if (!(element instanceof HTMLElement)) {
+  if (!(element instanceof Element)) {
     return { ok: false, reason: "target-not-found" };
   }
 
@@ -54,21 +56,67 @@ export function runHighlight(
     block: "center",
   });
 
-  const rect = element.getBoundingClientRect();
-  const pad = 6;
+  const pad = Math.min(Math.max(options?.padding ?? 6, 0), 64);
   const overlay = document.createElement("div");
   overlay.className = "bart-highlight-overlay";
   overlay.setAttribute("aria-hidden", "true");
-  overlay.style.top = `${rect.top + window.scrollY - pad}px`;
-  overlay.style.left = `${rect.left + window.scrollX - pad}px`;
-  overlay.style.width = `${rect.width + pad * 2}px`;
-  overlay.style.height = `${rect.height + pad * 2}px`;
+  if (options?.borderColor) {
+    overlay.style.setProperty("--bart-highlight-border-color", options.borderColor);
+  }
+  if (options?.backgroundColor) {
+    overlay.style.setProperty("--bart-highlight-fill", options.backgroundColor);
+  }
+  if (options?.ringColor) {
+    overlay.style.setProperty("--bart-highlight-ring-color", options.ringColor);
+  }
+  if (options?.borderRadius) {
+    overlay.style.setProperty("--bart-highlight-radius", options.borderRadius);
+  }
+  if (options?.borderStyle) {
+    overlay.style.setProperty("--bart-highlight-border-style", options.borderStyle);
+  }
+  if (options?.borderWidth !== undefined) {
+    const width = Math.min(Math.max(options.borderWidth, 0), 16);
+    overlay.style.setProperty("--bart-highlight-border-width", `${width}px`);
+  }
+
+  let frame = 0;
+  const position = () => {
+    frame = 0;
+    const rect = element.getBoundingClientRect();
+    overlay.style.top = `${rect.top + window.scrollY - pad}px`;
+    overlay.style.left = `${rect.left + window.scrollX - pad}px`;
+    overlay.style.width = `${rect.width + pad * 2}px`;
+    overlay.style.height = `${rect.height + pad * 2}px`;
+  };
+  const schedulePosition = () => {
+    if (frame === 0) frame = window.requestAnimationFrame(position);
+  };
+  position();
   document.body.appendChild(overlay);
+
+  window.addEventListener("resize", schedulePosition);
+  window.addEventListener("scroll", schedulePosition, true);
+  const resizeObserver =
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(schedulePosition);
+  resizeObserver?.observe(element);
 
   liveRegion().textContent =
     options?.label ?? `Highlighted page section: ${targetId}`;
 
-  const timer = window.setTimeout(dismissHighlight, options?.durationMs ?? 4000);
-  active = { overlay, timer };
+  const duration = Math.min(Math.max(options?.durationMs ?? 4000, 250), 30_000);
+  const timer = window.setTimeout(dismissHighlight, duration);
+  active = {
+    overlay,
+    timer,
+    cleanup: () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", schedulePosition);
+      window.removeEventListener("scroll", schedulePosition, true);
+    },
+  };
   return { ok: true };
 }

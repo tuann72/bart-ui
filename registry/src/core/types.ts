@@ -29,6 +29,18 @@ export interface BartStarterPrompt {
   prompt: string;
 }
 
+/** Consumer-owned appearance and timing for the page highlight overlay. */
+export interface BartHighlightOptions {
+  durationMs?: number;
+  padding?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  borderStyle?: "solid" | "dashed" | "dotted";
+  backgroundColor?: string;
+  ringColor?: string;
+  borderRadius?: string;
+}
+
 export type ToolPolicy = "auto" | "confirm" | "disabled";
 
 export interface BartToolPolicies {

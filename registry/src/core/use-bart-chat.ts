@@ -21,6 +21,7 @@ import {
 } from "./tool-policy";
 import type {
   BartPublicManifest,
+  BartHighlightOptions,
   BartToolOutput,
   BartToolPolicies,
   BartUIMessage,
@@ -49,6 +50,8 @@ export interface UseBartChatOptions {
   navigate: (route: string) => void;
   manifest: BartPublicManifest;
   toolPolicy?: Partial<BartToolPolicies>;
+  /** Consumer-owned styling and timing for highlights and click flashes. */
+  highlightOptions?: BartHighlightOptions;
   /** Hard cap on navigations per assistant turn to prevent loops. */
   maxNavigationsPerTurn?: number;
   /** Hard cap on element clicks per assistant turn to prevent loops. */
@@ -161,13 +164,13 @@ export function useBartChat(options: UseBartChatOptions): UseBartChatReturn {
           return { ok: false, reason: "interaction-limit-reached" };
         }
         interactionsThisTurn.current += 1;
-        return runInteract(target);
+        return runInteract(target, options.highlightOptions);
       }
       const check = validateTarget(manifest, routeRef.current, target);
       if (!check.ok) return check;
-      return runHighlight(target);
+      return runHighlight(target, options.highlightOptions);
     },
-    [manifest, maxNavigations, maxInteractions],
+    [manifest, maxNavigations, maxInteractions, options.highlightOptions],
   );
 
   const transport = useMemo(

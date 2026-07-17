@@ -47,6 +47,7 @@ export {
 } from "./core/tool-policy";
 export type {
   BartAppearance,
+  BartHighlightOptions,
   BartPublicManifest,
   BartRoute,
   BartTarget,

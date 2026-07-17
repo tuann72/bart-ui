@@ -17,6 +17,12 @@
   --bart-danger: oklch(0.5 0.2 25);
   --bart-danger-border: oklch(0.6 0.2 25);
   --bart-radius: 0.75rem;
+  --bart-highlight-border-color: var(--bart-accent);
+  --bart-highlight-border-width: 2px;
+  --bart-highlight-border-style: solid;
+  --bart-highlight-fill: color-mix(in oklch, var(--bart-accent) 8%, transparent);
+  --bart-highlight-ring-color: color-mix(in oklch, var(--bart-accent) 35%, transparent);
+  --bart-highlight-radius: var(--bart-radius);
 }
 
 .dark {
@@ -1010,9 +1016,12 @@ body.bart-sidebar-push-left { margin-left: var(--bart-sidebar-width); }
   position: absolute;
   z-index: 60;
   pointer-events: none;
-  border: 2px solid var(--bart-accent);
-  border-radius: var(--bart-radius);
-  box-shadow: 0 0 0 4px color-mix(in oklch, var(--bart-accent) 35%, transparent);
+  border-width: var(--bart-highlight-border-width);
+  border-style: var(--bart-highlight-border-style);
+  border-color: var(--bart-highlight-border-color);
+  border-radius: var(--bart-highlight-radius);
+  background: var(--bart-highlight-fill);
+  box-shadow: 0 0 0 4px var(--bart-highlight-ring-color);
   animation: bart-highlight-pulse 1.4s ease-in-out infinite;
 }
 
@@ -1093,8 +1102,8 @@ body.bart-sidebar-push-left { margin-left: var(--bart-sidebar-width); }
 }
 
 @keyframes bart-highlight-pulse {
-  0%, 100% { box-shadow: 0 0 0 4px color-mix(in oklch, var(--bart-accent) 35%, transparent); }
-  50% { box-shadow: 0 0 0 10px color-mix(in oklch, var(--bart-accent) 18%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 4px var(--bart-highlight-ring-color); }
+  50% { box-shadow: 0 0 0 10px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
